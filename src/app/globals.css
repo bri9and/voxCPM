@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa; /* zinc-50 */
+  --foreground: #18181b; /* zinc-900 */
+  --surface: #ffffff;
+  --primary: #047857; /* emerald-700 */
+  --primary-hover: #065f46; /* emerald-800 */
+  --alert: #e11d48; /* rose-600 */
+  --alert-bg: #fff1f2; /* rose-50 */
+  --muted: #71717a; /* zinc-500 */
+  --border: #e4e4e7; /* zinc-200 */
+}
+
+.dark {
+  --background: #09090b; /* zinc-950 */
+  --foreground: #fafafa; /* zinc-50 */
+  --surface: #18181b; /* zinc-900 */
+  --primary: #10b981; /* emerald-500 */
+  --primary-hover: #34d399; /* emerald-400 */
+  --alert: #f43f5e; /* rose-500 */
+  --alert-bg: #1c1917; /* stone-900 */
+  --muted: #a1a1aa; /* zinc-400 */
+  --border: #27272a; /* zinc-800 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-alert: var(--alert);
+  --color-alert-bg: var(--alert-bg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Input Focus States */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: var(--primary);
+}
+
+/* Range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #047857;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: -5px;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #047857;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
