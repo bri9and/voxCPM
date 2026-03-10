@@ -12,6 +12,8 @@ import base64
 import tempfile
 import time
 import logging
+import functools
+from collections import defaultdict
 from datetime import datetime
 
 from flask import Flask, request, jsonify
@@ -27,7 +29,72 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS: Only allow requests from the local Next.js frontend
+CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+
+# --- API Key Authentication ---
+API_SECRET_KEY = os.environ.get("API_SECRET_KEY")
+
+
+def require_api_key(f):
+    """Decorator that enforces API key authentication on an endpoint."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if not API_SECRET_KEY:
+            # If no key is configured, skip auth (dev mode convenience)
+            logger.warning("API_SECRET_KEY not set — authentication disabled")
+            return f(*args, **kwargs)
+
+        # Accept key from Authorization: Bearer <key> or X-API-Key header
+        auth_header = request.headers.get("Authorization", "")
+        api_key_header = request.headers.get("X-API-Key", "")
+
+        token = None
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        elif api_key_header:
+            token = api_key_header
+
+        if not token or token != API_SECRET_KEY:
+            logger.warning(f"Unauthorized request from {request.remote_addr}")
+            return jsonify({"error": "Unauthorized — invalid or missing API key"}), 401
+
+        return f(*args, **kwargs)
+    return decorated
+
+
+# --- In-Memory Rate Limiting ---
+# Tracks {ip: [timestamp, ...]} for sliding window rate limiting
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX", "10"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
+
+
+def check_rate_limit() -> bool:
+    """
+    Check if the current request IP is within the rate limit.
+    Returns True if the request is allowed, False if it should be rejected.
+    Uses a sliding window approach.
+    """
+    ip = request.remote_addr or "unknown"
+    now = time.time()
+    window_start = now - RATE_LIMIT_WINDOW_SECONDS
+
+    # Prune old entries outside the window
+    _rate_limit_store[ip] = [
+        t for t in _rate_limit_store[ip] if t > window_start
+    ]
+
+    if len(_rate_limit_store[ip]) >= RATE_LIMIT_MAX_REQUESTS:
+        return False
+
+    _rate_limit_store[ip].append(now)
+    return True
+
+
+# --- Input Validation ---
+MAX_TEXT_LENGTH = 5000
 
 # Global model instance (loaded once at startup)
 _model = None
@@ -85,6 +152,7 @@ def decode_audio_to_temp_file(audio_base64: str) -> str:
 
 
 @app.route("/api/tts", methods=["POST"])
+@require_api_key
 def tts():
     """
     Generate speech from text, optionally with voice cloning.
@@ -106,6 +174,14 @@ def tts():
         "durationSeconds": float        # Duration in seconds
     }
     """
+    # Rate limiting
+    if not check_rate_limit():
+        logger.warning(f"Rate limit exceeded for {request.remote_addr}")
+        return jsonify({
+            "error": "Rate limit exceeded",
+            "details": f"Maximum {RATE_LIMIT_MAX_REQUESTS} requests per {RATE_LIMIT_WINDOW_SECONDS} seconds"
+        }), 429
+
     start_time = time.time()
     prompt_wav_path = None
 
@@ -118,6 +194,13 @@ def tts():
         text = data.get("text", "").strip()
         if not text:
             return jsonify({"error": "Text is required"}), 400
+
+        # Input length validation
+        if len(text) > MAX_TEXT_LENGTH:
+            return jsonify({
+                "error": "Text too long",
+                "details": f"Maximum {MAX_TEXT_LENGTH} characters allowed, got {len(text)}"
+            }), 400
 
         # Log request metadata (not audio content)
         logger.info(f"TTS Request: text_length={len(text)}, "

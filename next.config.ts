@@ -1,14 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/tts",
-        destination: "http://localhost:5001/api/tts",
-      },
-    ];
-  },
+  // The /api/tts rewrite has been replaced by a Route Handler at
+  // src/app/api/tts/route.ts which injects the API_SECRET_KEY
+  // server-side before proxying to Flask.
 };
 
 export default nextConfig;

@@ -1,13 +1,14 @@
 import { TTSRequest, TTSResponse, TTSError } from "./types";
 
-// Call Flask API directly to avoid Next.js proxy timeout on long requests
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+// Route through the Next.js API route handler (/api/tts) which injects
+// the API_SECRET_KEY server-side before proxying to Flask.
+// This keeps the secret out of the browser.
 
 export async function generateTTS(
   request: TTSRequest
 ): Promise<TTSResponse | TTSError> {
   try {
-    const response = await fetch(`${API_BASE}/api/tts`, {
+    const response = await fetch("/api/tts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
