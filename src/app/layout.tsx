@@ -35,6 +35,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50`}
       >
         {children}
+        <span style={{ position: 'fixed', top: 8, right: 12, fontSize: 11, color: 'rgba(4,120,87,0.4)', zIndex: 9999, fontFamily: 'monospace', pointerEvents: 'none' }}>v2.0</span>
       </body>
     </html>
   );
